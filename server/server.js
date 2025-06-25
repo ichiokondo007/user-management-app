@@ -53,6 +53,20 @@ const repo = new Repo({
 // ユーザー別ドキュメント管理
 const userDocuments = new Map();
 
+// ドキュメントごとの編集者管理（docId → Set of editorNames）
+const documentEditors = new Map();
+
+// 編集状況を表示する関数
+function displayEditingStatus() {
+  console.log('\n📊 ===== 現在の編集状況 =====');
+  userDocuments.forEach((docId, userId) => {
+    const editors = documentEditors.get(docId) || new Set();
+    const editorsList = editors.size > 0 ? Array.from(editors).join(', ') : '(なし)';
+    console.log(`ユーザ${userId}: docId[${docId.slice(0, 8)}...], 編集者[${editorsList}]`);
+  });
+  console.log('================================\n');
+}
+
 // WebSocket接続時の処理
 wss.on('connection', (ws) => {
   ws.on('message', (message) => {
@@ -78,6 +92,16 @@ wss.on('connection', (ws) => {
           console.log(`Using document for ユーザ${data.userId}: ${docId}`);
         }
         
+        // 編集者を追加
+        if (data.editorName) {
+          if (!documentEditors.has(docId)) {
+            documentEditors.set(docId, new Set());
+          }
+          documentEditors.get(docId).add(data.editorName);
+          console.log(`👤 編集者追加: ${data.editorName} がユーザ${data.userId}を編集開始`);
+          displayEditingStatus();
+        }
+        
         // ドキュメントIDを返送
         ws.send(JSON.stringify({
           type: 'DOCUMENT_ID',
@@ -89,6 +113,10 @@ wss.on('connection', (ws) => {
       // Automerge join メッセージ
       if (data.type === 'join' && data.senderId && data.peerMetadata) {
         console.log('🔌 Automerge client connected:', data.senderId);
+        
+        // senderIdから対応するドキュメントを探して編集状況を更新
+        // （senderIdは編集者名なので、現在編集中のドキュメントを特定する必要がある）
+        // この実装では、編集者が複数のドキュメントを同時に編集できないという制限がある
       }
     } catch (e) {
       // Automergeプロトコルメッセージは無視

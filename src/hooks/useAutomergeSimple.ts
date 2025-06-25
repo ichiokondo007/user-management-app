@@ -31,7 +31,7 @@ export function useAutomergeSimple(
   const [documentId, setDocumentId] = useState('');
 
   useEffect(() => {
-    if (!editorName || !userId || userId === 'new') {
+    if (!editorName || !userId) {
       return;
     }
 
@@ -67,8 +67,12 @@ export function useAutomergeSimple(
       
       const documentId = await new Promise<string>((resolve) => {
         tempWs.onopen = () => {
-          // まずドキュメントIDを要求
-          tempWs.send(JSON.stringify({ type: 'GET_DOCUMENT', userId: userId }));
+          // まずドキュメントIDを要求（編集者名も送信）
+          tempWs.send(JSON.stringify({ 
+            type: 'GET_DOCUMENT', 
+            userId: userId,
+            editorName: editorName 
+          }));
         };
         
         tempWs.onmessage = (event) => {
