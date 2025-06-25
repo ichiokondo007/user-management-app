@@ -1,0 +1,19 @@
+{
+  "name": "automerge-websocket-server",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "WebSocket server for Automerge synchronization",
+  "main": "automerge-server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@automerge/automerge": "^2.2.9",
+    "@automerge/automerge-repo": "^2.0.4",
+    "@automerge/automerge-repo-network-websocket": "^2.0.4",
+    "@automerge/automerge-repo-storage-nodefs": "^2.0.4",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "ws": "^8.18.2"
+  }
+}

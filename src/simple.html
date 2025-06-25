@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Automerge Test</title>
+</head>
+<body>
+    <h1>Automerge Sync Test</h1>
+    <div>
+        <input id="nameInput" placeholder="Name" />
+        <input id="addressInput" placeholder="Address" />
+        <button onclick="updateName()">Update Name</button>
+        <button onclick="updateAddress()">Update Address</button>
+    </div>
+    <div id="status"></div>
+    <div id="content"></div>
+
+    <script type="module">
+        import { Repo } from '/node_modules/@automerge/automerge-repo/dist/index.js';
+        import { BrowserWebSocketClientAdapter } from '/node_modules/@automerge/automerge-repo-network-websocket/dist/index.js';
+
+        console.log('Starting simple test...');
+
+        const repo = new Repo({
+            network: [new BrowserWebSocketClientAdapter('ws://localhost:3031')],
+            peerId: `client-${Math.random().toString(36).substr(2, 9)}`
+        });
+
+        const handle = repo.create({ name: 'Test', address: 'Tokyo' });
+        console.log('Document created:', handle.documentId);
+
+        handle.on('change', ({ doc }) => {
+            console.log('Document changed:', doc);
+            document.getElementById('content').innerHTML = JSON.stringify(doc, null, 2);
+        });
+
+        document.getElementById('status').innerText = `Doc ID: ${handle.documentId}`;
+
+        window.updateName = () => {
+            const value = document.getElementById('nameInput').value;
+            handle.change(doc => { doc.name = value; });
+        };
+
+        window.updateAddress = () => {
+            const value = document.getElementById('addressInput').value;
+            handle.change(doc => { doc.address = value; });
+        };
+    </script>
+</body>
+</html>
