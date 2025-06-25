@@ -13,6 +13,9 @@ const mockUsers: User[] = [
   { id: '1', name: 'ユーザ1', address: 'address1', memo: 'メモ1' },
   { id: '2', name: 'ユーザ2', address: 'address2', memo: 'メモ2' },
   { id: '3', name: 'ユーザ3', address: 'address3', memo: 'メモ3' },
+  { id: '4', name: 'ユーザ4', address: 'address4', memo: 'メモ4' },
+  { id: '5', name: 'ユーザ5', address: 'address5', memo: 'メモ5' },
+  { id: '6', name: 'ユーザ6', address: 'address6', memo: 'メモ6' },
 ];
 
 const UserList: React.FC = () => {
@@ -22,6 +25,12 @@ const UserList: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // localStorageから編集者名を復元
+    const savedUsername = localStorage.getItem('editor-username');
+    if (savedUsername) {
+      setUsername(savedUsername);
+    }
+    
     // 一覧画面に戻った際にlocalStorageのdocumentIDをクリア
     console.log('🧹 Clearing localStorage document IDs');
     Object.keys(localStorage).forEach(key => {
@@ -52,14 +61,37 @@ const UserList: React.FC = () => {
   }
 
   return (
-    <div style={{ padding: '20px' }}>
-      <h1>ユーザー一覧</h1>
-      <div style={{ marginBottom: '20px' }}>
+    <div>
+      {/* ヘッダーバー */}
+      <header style={{
+        backgroundColor: '#00294d',
+        color: 'white',
+        padding: '16px 20px',
+        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+        marginBottom: '0',
+        display: 'flex',
+        alignItems: 'center'
+      }}>
+        <img 
+          src="/KD5.svg" 
+          alt="KD5 Logo" 
+          style={{ 
+            height: '50px',
+            width: 'auto',
+            marginRight: '16px'
+          }} 
+        />
+        <h1 style={{ margin: '0', fontSize: '1.5em' }}>Automerge-repo Exsample</h1>
+      </header>
+      
+      <div style={{ padding: '20px' }}>
+        <h2 style={{ marginTop: '0', marginBottom: '20px' }}>User List</h2>
+        <div style={{ marginBottom: '20px' }}>
         <input
           type="text"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
-          placeholder="編集者名を入力"
+          placeholder="集者名を入力"
           style={{
             padding: '8px 12px',
             fontSize: '16px',
@@ -104,6 +136,7 @@ const UserList: React.FC = () => {
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 };

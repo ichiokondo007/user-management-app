@@ -30,24 +30,49 @@ const UserForm: React.FC = () => {
 
   const handleBack = () => {
     console.log('🔙 Back button clicked, disconnecting...');
+    // 編集者名をlocalStorageに保存
+    localStorage.setItem('editor-username', username);
     disconnect();
     navigate('/');
   };
 
   if (!username || !editorSet) {
     return (
-      <div style={{ padding: '20px' }}>
-        <h2>編集者名を入力してください</h2>
-        <input
-          type="text"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          placeholder="編集者名を入力"
-          style={{ padding: '8px', marginRight: '10px' }}
-        />
-        <button 
-          onClick={() => setEditorSet(true)}
-          disabled={!username.trim()}
+      <div>
+        {/* ヘッダーバー */}
+        <header style={{
+          backgroundColor: '#00294d',
+          color: 'white',
+          padding: '16px 20px',
+          boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+          marginBottom: '0',
+          display: 'flex',
+          alignItems: 'center'
+        }}>
+          <img 
+            src="/KD5.svg" 
+            alt="KD5 Logo" 
+            style={{ 
+              height: '50px',
+              width: 'auto',
+              marginRight: '16px'
+            }} 
+          />
+          <h1 style={{ margin: '0', fontSize: '1.5em' }}>Automerge-repo Exsample</h1>
+        </header>
+        
+        <div style={{ padding: '20px' }}>
+          <h2>編集者名を入力してください</h2>
+          <input
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="編集者名を入力"
+            style={{ padding: '8px', marginRight: '10px' }}
+          />
+          <button 
+            onClick={() => setEditorSet(true)}
+            disabled={!username.trim()}
           style={{ 
             padding: '8px 16px', 
             marginRight: '10px',
@@ -59,13 +84,55 @@ const UserForm: React.FC = () => {
         >
           確定
         </button>
-        <button onClick={() => navigate('/')}>一覧へ戻る</button>
+        <button 
+          onClick={() => {
+            // 編集者名をlocalStorageに保存
+            if (username.trim()) {
+              localStorage.setItem('editor-username', username);
+            }
+            navigate('/');
+          }}
+          style={{
+            padding: '8px 16px',
+            background: '#2196F3',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer'
+          }}
+        >
+          一覧へ戻る
+        </button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div style={{ padding: '20px' }}>
+    <div>
+      {/* ヘッダーバー */}
+      <header style={{
+        backgroundColor: '#00294d',
+        color: 'white',
+        padding: '16px 20px',
+        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+        marginBottom: '0',
+        display: 'flex',
+        alignItems: 'center'
+      }}>
+        <img 
+          src="/KD5.svg" 
+          alt="KD5 Logo" 
+          style={{ 
+            height: '50px',
+            width: 'auto',
+            marginRight: '16px'
+          }} 
+        />
+        <h1 style={{ margin: '0', fontSize: '1.5em' }}>Automerge-repo Exsample</h1>
+      </header>
+      
+      <div style={{ padding: '20px' }}>
       <h1>ユーザ{userId}の情報編集</h1>
       <div style={{ marginBottom: '20px', padding: '10px', background: '#f0f0f0', borderRadius: '4px', color: '#333' }}>
         <strong>編集者:</strong> {username}<br/>
@@ -134,10 +201,22 @@ const UserForm: React.FC = () => {
           </label>
         </div>
         
-        <button type="button" onClick={handleBack}>
+        <button 
+          type="button" 
+          onClick={handleBack}
+          style={{
+            padding: '8px 16px',
+            background: '#2196F3',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer'
+          }}
+        >
           一覧へ戻る
         </button>
       </form>
+      </div>
     </div>
   );
 };
