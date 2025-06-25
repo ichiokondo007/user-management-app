@@ -1,25 +1,22 @@
 import { useState, useEffect } from 'react';
-import { Repo } from '@automerge/automerge-repo';
+import { DocHandle, Repo, type DocumentId, type PeerId } from '@automerge/automerge-repo';
 import { BrowserWebSocketClientAdapter } from '@automerge/automerge-repo-network-websocket';
 import { IndexedDBStorageAdapter } from '@automerge/automerge-repo-storage-indexeddb';
-
 interface UserDocument {
   name?: string;
   address?: string;
   memo?: string;
 }
-
 interface UseAutomergeSimpleReturn {
   formData: UserDocument;
   isReady: boolean;
   updateField: (field: keyof UserDocument, value: string) => void;
   documentId: string;
+  disconnect: () => void;
 }
-
 export function useAutomergeSimple(
-  userId: string, 
-  editorName: string,
-  sharedDocId?: string
+  userId: string,
+  editorName: string
 ): UseAutomergeSimpleReturn {
   const [formData, setFormData] = useState<UserDocument>({
     name: '',
@@ -27,54 +24,39 @@ export function useAutomergeSimple(
     memo: '',
   });
   const [isReady, setIsReady] = useState(false);
-  const [docHandle, setDocHandle] = useState<any>(null);
+  const [docHandle, setDocHandle] = useState<DocHandle<UserDocument> | null>(null);
   const [documentId, setDocumentId] = useState('');
+  const [network, setNetwork] = useState<BrowserWebSocketClientAdapter | null>(null);
 
   useEffect(() => {
     if (!editorName || !userId) {
       return;
     }
-
+    let isActive = true;
     async function initRepo() {
-      console.log('🚀 Connecting to server...');
-      
-      // Automerge Repoを初期化
-      const network = new BrowserWebSocketClientAdapter('ws://localhost:3031');
-      
-      // ネットワーク接続状況を監視（デバッグ用）
-      network.on('ready', () => {
-        console.log('🌐 Network ready');
+      const networkAdapter = new BrowserWebSocketClientAdapter('ws://localhost:3031');
+      if (!isActive) return;
+      setNetwork(networkAdapter);
+      networkAdapter.on('peer-disconnected', (peerId) => {
+        if (isActive) console.log('Peer disconnected:', peerId);
       });
-      
-      network.on('peer-connected', (peerId) => {
-        console.log('🌐 Peer connected:', peerId);
-      });
-      
-      network.on('peer-disconnected', (peerId) => {
-        console.log('🌐 Peer disconnected:', peerId);
-      });
-      
-      const repo = new Repo({
-        network: [network],
+      const repoInstance = new Repo({
+        network: [networkAdapter],
         storage: new IndexedDBStorageAdapter('user-app-db'),
-        peerId: editorName,
+        peerId: editorName as PeerId,
       });
-      
-      console.log('🌐 Repo initialized with peerId:', editorName);
-
-      // 一時的なWebSocket経由でサーバーからdocumentIDを取得
+      if (!isActive) return;
+      //WebSocket経由でサーバーからdocumentIDを取得 type: GET_DOCUMENT
       const tempWs = new WebSocket('ws://localhost:3031');
-      
       const documentId = await new Promise<string>((resolve) => {
         tempWs.onopen = () => {
-          // まずドキュメントIDを要求（編集者名も送信）
-          tempWs.send(JSON.stringify({ 
-            type: 'GET_DOCUMENT', 
+          const getMessage = {
+            type: 'GET_DOCUMENT',
             userId: userId,
-            editorName: editorName 
-          }));
+            editorName: editorName
+          };
+          tempWs.send(JSON.stringify(getMessage));
         };
-        
         tempWs.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data);
@@ -82,21 +64,15 @@ export function useAutomergeSimple(
               resolve(data.documentId);
               tempWs.close();
             }
-          } catch (e) {}
+          } catch {
+            // parse error
+          }
         };
       });
-      
-      const handle = await repo.find(documentId);
-      
-      
+      const handle  = await repoInstance.find<UserDocument>(documentId as DocumentId);
       setDocHandle(handle);
       setDocumentId(handle.documentId);
-      console.log('📄 Final documentId set:', handle.documentId);
-      
-      // ドキュメントの読取
-      const doc = await handle.doc();
-      console.log('📄 初期ドキュメント:', doc);
-      
+      const doc = await handle.doc() as UserDocument;
       if (doc) {
         setFormData({
           name: doc.name || '',
@@ -104,41 +80,62 @@ export function useAutomergeSimple(
           memo: doc.memo || '',
         });
       }
-      
-      // 変更と通知
-      handle.on('change', ({ doc, patches }) => {
-        console.log('📨 変更を受信 - ドキュメント:', doc);
-        console.log('📨 変更を受信 - パッチ:', patches);
-        
+      handle.on('change', ({ doc }) => {
+        const typedDoc = doc as UserDocument;
         setFormData({
-          name: doc.name || '',
-          address: doc.address || '',
-          memo: doc.memo || '',
+          name: typedDoc.name || '',
+          address: typedDoc.address || '',
+          memo: typedDoc.memo || '',
         });
       });
-      
       setIsReady(true);
-      console.log('✅ Ready to edit');
     }
 
     initRepo();
+    return () => {
+      isActive = false;
+      if (network && 'disconnect' in network && typeof network.disconnect === 'function') {
+        network.disconnect();
+      }
+      setIsReady(false);
+      setDocHandle(null);
+      setDocumentId('');
+      setNetwork(null);
+    };
   }, [userId, editorName]);
 
   const updateField = (field: keyof UserDocument, value: string) => {
     if (!docHandle || !isReady) return;
-    
-    console.log('🔄 Updating field:', field, 'with value:', value);
-    console.log('🔄 Current docHandle:', docHandle);
-    console.log('🔄 DocumentId:', docHandle.documentId);
-    
-    docHandle.change((doc: any) => {
-      console.log('🔄 Before change - doc:', doc);
+    docHandle.change((doc: UserDocument) => {
       doc[field] = value;
-      console.log('🔄 After change - doc:', doc);
     });
-    
-    console.log('🔄 Change operation completed');
   };
 
-  return { formData, isReady, updateField, documentId };
+  const disconnect = () => {
+    if (network && 'disconnect' in network && typeof network.disconnect === 'function') {
+      network.disconnect();
+    }
+  };
+
+  return { formData, isReady, updateField, documentId, disconnect };
 }
+
+
+
+  // tempWs.close()：
+  // - 用途: GET_DOCUMENT用の一時的なWebSocket接続のクローズ
+  // - 対象: 単純なWebSocketコネクション
+  // - 処理: TCP/WebSocketレベルでの接続切断
+  // - タイミング: documentIDを受信したら即座に実行
+  // - 影響範囲: この1つの接続のみ
+
+  // network.disconnect()：
+  // - 用途: Automergeの同期処理システム全体の停止
+  // - 対象: BrowserWebSocketClientAdapter（Automergeネットワークアダプター）
+  // - 処理:
+  //   - Automergeプロトコルレベルでの切断
+  //   - ピア同期の停止
+  //   - 内部的なイベントハンドラのクリーンアップ
+  //   - Automergeの再接続機構の停止
+  // - タイミング: コンポーネントアンマウント時やリダイレクト時
+  // - 影響範囲: Automergeの同期システム全体

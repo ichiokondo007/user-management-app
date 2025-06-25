@@ -19,7 +19,7 @@ const UserForm: React.FC = () => {
     }
   }, []);
   
-  const { formData, isReady, updateField, documentId } = useAutomergeSimple(userId || '', username);
+  const { formData, isReady, updateField, documentId, disconnect } = useAutomergeSimple(userId || '', username);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -29,6 +29,8 @@ const UserForm: React.FC = () => {
   };
 
   const handleBack = () => {
+    console.log('🔙 Back button clicked, disconnecting...');
+    disconnect();
     navigate('/');
   };
 
