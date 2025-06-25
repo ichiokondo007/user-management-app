@@ -53,27 +53,8 @@ const repo = new Repo({
 // ユーザー別ドキュメント管理
 const userDocuments = new Map();
 
-// 編集者管理（ユーザーID → 編集者のSet）
-const activeEditors = new Map();
-
-// WebSocket接続と編集者情報の管理
-const connectionInfo = new Map();
-
-// Automerge状況を表示する関数
-function displayAutomergeStatus() {
-  console.log('\n📊 ===== 現在のAutomerge状況 =====');
-  userDocuments.forEach((docId, userId) => {
-    const editors = activeEditors.get(userId) || new Set();
-    const editorsList = editors.size > 0 ? Array.from(editors).join(', ') : '(なし)';
-    console.log(`ユーザ${userId}: 編集者[${editorsList}], docId: ${docId.slice(0, 8)}...`);
-  });
-  console.log('================================\n');
-}
-
 // WebSocket接続時の処理
 wss.on('connection', (ws) => {
-  let isTemporaryConnection = true; // 一時的な接続かどうかのフラグ
-  
   ws.on('message', (message) => {
     try {
       const data = JSON.parse(message.toString());
@@ -105,36 +86,9 @@ wss.on('connection', (ws) => {
         }));
       }
       
-      // 編集者情報を受信（Automerge join メッセージから）
+      // Automerge join メッセージ
       if (data.type === 'join' && data.senderId && data.peerMetadata) {
-        isTemporaryConnection = false; // Automerge接続は永続的
         console.log('🔌 Automerge client connected:', data.senderId);
-      }
-      
-      // 編集者とユーザーIDの関連付け
-      if (data.type === 'EDITOR_INFO') {
-        console.log('EDITOR_INFO received:', data);
-        
-        if (data.editorId && data.userId) {
-          isTemporaryConnection = false; // 編集者情報を持つ接続は永続的
-          
-          connectionInfo.set(ws, { 
-            editorId: data.editorId, 
-            userId: data.userId,
-            joinTime: new Date() 
-          });
-          
-          // 編集者をアクティブリストに追加
-          if (!activeEditors.has(data.userId)) {
-            activeEditors.set(data.userId, new Set());
-          }
-          activeEditors.get(data.userId).add(data.editorId);
-          
-          console.log(`\n👤 接続: 編集者ID: ${data.editorId}, ユーザID: ${data.userId} を編集`);
-          displayAutomergeStatus();
-        } else {
-          console.log('❌ EDITOR_INFO missing editorId or userId:', data);
-        }
       }
     } catch (e) {
       // Automergeプロトコルメッセージは無視
@@ -142,25 +96,7 @@ wss.on('connection', (ws) => {
   });
   
   ws.on('close', () => {
-    const info = connectionInfo.get(ws);
-    if (info && info.editorId && info.userId) {
-      // 編集者をアクティブリストから削除
-      const editors = activeEditors.get(info.userId);
-      if (editors) {
-        editors.delete(info.editorId);
-        if (editors.size === 0) {
-          activeEditors.delete(info.userId);
-        }
-      }
-      
-      console.log(`\n👤 切断: 編集者ID: ${info.editorId}, ユーザID: ${info.userId} disconnect`);
-      displayAutomergeStatus();
-    } else if (!isTemporaryConnection) {
-      console.log('🔌 WebSocket client disconnected');
-    }
-    // 一時的な接続の場合はログを出さない
-    
-    connectionInfo.delete(ws);
+    console.log('🔌 WebSocket client disconnected');
   });
   
   ws.on('error', (error) => {

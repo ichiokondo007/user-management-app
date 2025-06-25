@@ -29,7 +29,6 @@ export function useAutomergeSimple(
   const [isReady, setIsReady] = useState(false);
   const [docHandle, setDocHandle] = useState<any>(null);
   const [documentId, setDocumentId] = useState('');
-  const [websocket, setWebsocket] = useState<WebSocket | null>(null);
 
   useEffect(() => {
     if (!editorName || !userId || userId === 'new') {
@@ -42,7 +41,7 @@ export function useAutomergeSimple(
       // Automerge Repoを初期化
       const network = new BrowserWebSocketClientAdapter('ws://localhost:3031');
       
-      // ネットワーク接続状況を監視
+      // ネットワーク接続状況を監視（デバッグ用）
       network.on('ready', () => {
         console.log('🌐 Network ready');
       });
@@ -85,22 +84,6 @@ export function useAutomergeSimple(
       
       const handle = await repo.find(documentId);
       
-      // 少し待ってから編集者情報を送信（WebSocket接続確立を待つ）
-      setTimeout(() => {
-        const ws = (network as any).adapter?.socket;
-        console.log('📡 Sending EDITOR_INFO - WebSocket state:', ws?.readyState);
-        if (ws && ws.readyState === WebSocket.OPEN) {
-          const editorInfo = { 
-            type: 'EDITOR_INFO', 
-            editorId: editorName, 
-            userId: userId 
-          };
-          console.log('📤 Sending EDITOR_INFO:', editorInfo);
-          ws.send(JSON.stringify(editorInfo));
-        } else {
-          console.log('❌ WebSocket not ready for EDITOR_INFO');
-        }
-      }, 1000); // 1秒待機
       
       setDocHandle(handle);
       setDocumentId(handle.documentId);
